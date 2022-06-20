@@ -1,2 +1,2 @@
-# year-cohort-projectName
-project template repo
+# 2022-March-Gifti-backend
+The API for Gifti
