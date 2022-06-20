@@ -26,7 +26,6 @@ app.post('/events', async (req, res) =>{
         deadline: req.body.deadline,
         participants: []
     }
-    console.log(req.body)
     const connection = await MongoClient.connect(url)
     const db = connection.db('gifti')
     const collection = db.collection('events')
