@@ -1,14 +1,14 @@
 const express = require('express')
 const cors = require('cors')
-
 const MongoClient = require('mongodb').MongoClient
 const ObjectId = require('mongodb').ObjectId
+
 const app = express()
 const port = 3000
+const url= 'mongodb://root:password@localhost:27017'
 
 app.use(express.json())
 app.use(cors())
-const url= 'mongodb://root:password@localhost:27017'
 app.use(express.urlencoded({extended: true}))
 
 app.get('/events/:id', async (req, res) => {
