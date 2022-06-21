@@ -2,10 +2,27 @@ const express = require('express')
 const cors = require('cors')
 const MongoClient = require('mongodb').MongoClient
 const ObjectId = require('mongodb').ObjectId
+const Schema = require('validate')
 
 const app = express()
 const port = 3000
 const url= 'mongodb://root:password@localhost:27017'
+
+/**
+ *  Enforces the format of the JSON object
+ *
+ * @param status
+ * @param message
+ * @param data
+ * @returns {{data: null, message, status}}
+ */
+const jsonHelper = (status, message, data = null) => {
+    return {
+        status,
+        message,
+        data
+    }
+}
 
 /**
  * Returns a connection to the 'gifti' database
@@ -31,15 +48,28 @@ const dbMiddleware = async (req, res, next) => {
     try {
         connection = await getDb()
     } catch(err) {
-        return res.status(500).json({
-            status: 500,
-            message: 'Internal server error (none of your business)',
-            data: null
-        })
+        return res.status(500).json(jsonHelper(500, 'Internal server error (none of your business)'))
     }
     res.locals.collection = connection.collection('events')
     next()
 }
+
+/**
+ * Schema for the form submission for events
+ *
+ * @type {Schema}
+ */
+const eventValidator = new Schema({
+    event_name: {
+        type: String,
+        required: true,
+        length: {min : 3, max : 255}
+    },
+    deadline: {
+        type: Date,
+        required: true
+    }
+})
 
 app.use(express.json())
 app.use(cors())
@@ -50,11 +80,7 @@ app.use(express.urlencoded({extended: true}))
 // /events route
 
 app.get('/events', async (req, res) =>{
-    res.status(405).json({
-        "status": 405,
-        "message": "Method not allowed",
-        "data": null
-    })
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
 app.post('/events', dbMiddleware, async (req, res) =>{
@@ -64,36 +90,31 @@ app.post('/events', dbMiddleware, async (req, res) =>{
         participants: []
     }
 
+    const errors = eventValidator.validate(dataToInsert)
+
+    if(errors.length > 0) {
+        let message = ''
+        errors.forEach(error => {
+            message += error.message + ' '
+        })
+        return res.status(400).json(jsonHelper(400, message))
+    }
+
     const result = await res.locals.collection.insertOne(dataToInsert)
+
     if(result.insertedId) {
-        res.status(200).json({
-            status: 200,
-            message: 'Document added successfully',
-            data: {id: result.insertedId}
-        })
+        res.status(200).json(jsonHelper(200, 'Document added successfully', {id: result.insertedId}))
     } else {
-        res.status(400).json({
-            status: 400,
-            message: 'Failed to add document',
-            data: null
-        })
+        res.status(400).json(jsonHelper(400, 'Failed to add document'))
     }
 })
 
 app.put('/events', async (req, res) =>{
-    res.status(405).json({
-        "status": 405,
-        "message": "Method not allowed",
-        "data": null
-    })
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
 app.delete('/events', async (req, res) =>{
-    res.status(405).json({
-        "status": 405,
-        "message": "Method not allowed",
-        "data": null
-    })
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
 // /events/:id Route
@@ -103,61 +124,69 @@ app.get('/events/:id', dbMiddleware, async (req, res) => {
     try {
         _id = ObjectId(req.params.id)
     } catch(err) {
-        res.status(400).json({
-            "status": 400,
-            "message": "Invalid ID",
-            "data": null
-        })
+        res.status(400).json(jsonHelper(400, 'Invalid ID'))
+
+        return
     }
 
     const data = await res.locals.collection.findOne({_id})
     if(data._id) {
-        res.status(200).json({
-            "status": 200,
-            "message": "Event retrieved successfully!",
-            "data": data
-        })
+        res.status(200).json(jsonHelper(200, 'Event retrieved successfully', data))
     } else {
-        res.status(400).json({
-            "status": 400,
-            "message": "Invalid ID",
-            "data": null
-        })
+        res.status(400).json(jsonHelper(400, 'Invalid ID'))
     }
 })
 
 app.post('/events/:id', async (req, res) => {
-    res.status(405).json({
-        "status": 405,
-        "message": "Method not allowed",
-        "data": null
-    })
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
 app.put('/events/:id', async (req, res) => {
-    res.status(405).json({
-        "status": 405,
-        "message": "Method not allowed",
-        "data": null
-    })
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
 app.delete('/events/:id', async (req, res) => {
-    res.status(405).json({
-        "status": 405,
-        "message": "Method not allowed",
-        "data": null
-    })
+    res.status(405).json(jsonHelper(405, "Method not allowed"))
+})
+
+// /participant/:eventId route
+
+app.get('/participant/:eventId', async (req, res) => {
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
+})
+
+app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
+    const _id = ObjectId(req.params.eventId)
+    const id = ObjectId()
+
+    const dataToInsert = {
+        id,
+        name: req.body.name,
+        email: req.body.email,
+        address: req.body.address
+    }
+
+    const result = res.locals.collection.updateOne({_id}, {$push : {participants: dataToInsert}})
+
+    if(result.modifiedCount === 0) {
+        res.status(400).json(jsonHelper(400, 'Could not add participant'))
+    } else {
+        res.status(200).json(jsonHelper(200, 'Participant added',{id}))
+    }
+})
+
+app.put('/participant/:eventId', async (req, res) => {
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
+})
+
+app.delete('/participant/:eventId', async (req, res) => {
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
 // Catch-all route
 
 app.all('*', (req, res) =>{
-    res.status(404).json({
-        status: 404,
-        message: 'Route not implemented, see documentation at: https://github.com/iO-Academy/2022-mar-gifti-api',
-        data: null
-    })
+    res.status(404).json(jsonHelper(404, 'Route not implemented, see documentation at: https://github.com/iO-Academy/2022-mar-gifti-api'))
 })
 
 app.listen(port)
