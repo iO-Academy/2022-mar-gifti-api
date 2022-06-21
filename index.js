@@ -150,6 +150,40 @@ app.delete('/events/:id', async (req, res) => {
     })
 })
 
+// /participant/:eventId route
+
+app.get('/participant/:eventId', async (req, res) => {
+    res.status(405).json({
+        "status": 405,
+        "message": "Method not allowed",
+        "data": null
+    })
+})
+
+app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
+    const dataToInsert = {
+        name: req.body.name,
+        email: req.body.email,
+        address: req.body.address
+    }
+})
+
+app.put('/participant/:eventId', async (req, res) => {
+    res.status(405).json({
+        "status": 405,
+        "message": "Method not allowed",
+        "data": null
+    })
+})
+
+app.delete('/participant/:eventId', async (req, res) => {
+    res.status(405).json({
+        "status": 405,
+        "message": "Method not allowed",
+        "data": null
+    })
+})
+
 // Catch-all route
 
 app.all('*', (req, res) =>{
