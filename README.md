@@ -59,7 +59,7 @@
 
 * **URL Params**
 
-   `:id`corresponds to a MongoDB ID
+   `:id`corresponds to a MongoDB ID for an event
 
 * **Success Response:**
 
@@ -88,6 +88,53 @@
       {
         "status": "400",
         "message": "Invalid ID",
+        "data": null
+      }
+    ```
+
+----
+### Adds a participant to an event
+
+* **URL**
+
+  `/participants/:eventId`
+
+* **Method:**
+
+  `POST`
+
+* **URL Params**
+
+  `:eventId`corresponds to a MongoDB ID for the event the participant is to be added to
+
+* **Data Params**
+
+    * **Body:** `{ name : string, email : string , ?address : {street : string, city : string, postcode : string}}`
+
+* **Success Response:**
+
+    * **Code:** 200 <br />
+      **Content:** <br />
+    ```json
+      {
+        "status": "200",
+        "message": "Participant added",
+        "data": {
+                  "id": "62b19bdfa0fff7ad7f39c98a"
+                }
+      }
+    ```
+
+
+
+* **Error Response:**
+
+    * **Code:** 400 BAD REQUEST <br />
+      **Content:** <br />
+    ```json
+      {
+        "status": "400",
+        "message": "Could not add participant",
         "data": null
       }
     ```
