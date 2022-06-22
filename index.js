@@ -28,6 +28,7 @@ app.post('/events', dbMiddleware, async (req, res) =>{
     const dataToInsert = {
         event_name: req.body.event_name,
         deadline: req.body.deadline,
+        address_required: req.body.address_required,
         participants: []
     }
 
