@@ -97,7 +97,7 @@
 
 * **URL**
 
-  `/participant/:eventId`
+  `/participants/:eventId`
 
 * **Method:**
 

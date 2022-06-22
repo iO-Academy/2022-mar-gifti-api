@@ -1,121 +1,16 @@
 const express = require('express')
 const cors = require('cors')
-const MongoClient = require('mongodb').MongoClient
 const ObjectId = require('mongodb').ObjectId
-const Schema = require('validate')
 const { postcodeValidator, PostcodeValidatorExistsForCountry} = require('postcode-validator')
 const EmailValidator = require('email-validator')
+const eventValidator = require('./validators/eventValidator')
+const participantValidator = require('./validators/participantValidator')
+const addressValidator = require('./validators/addressValidator')
+const jsonHelper = require('./helpers/jsonHelper')
+const dbMiddleware = require('./middleware/dbMiddleware')
 
 const app = express()
 const port = 3000
-const url= 'mongodb://root:password@localhost:27017'
-
-/**
- *  Enforces the format of the JSON object
- *
- * @param status
- * @param message
- * @param data
- * @returns {{data: null, message, status}}
- */
-const jsonHelper = (status, message, data = null) => {
-    return {
-        status,
-        message,
-        data
-    }
-}
-
-/**
- * Returns a connection to the 'gifti' database
- *
- * @returns {Promise<Db>}
- */
-const getDb = async () => {
-    let connection = {}
-    connection = await MongoClient.connect(url, {ignoreUndefined: true})
-    return connection.db('gifti')
-}
-
-/**
- * Middleware to connect to the events collection and store it in res.locals. Should used as a route specific callback
- *
- * @param req
- * @param res
- * @param next
- * @returns {Promise<*>}
- */
-const dbMiddleware = async (req, res, next) => {
-    let connection = null
-    try {
-        connection = await getDb()
-    } catch(err) {
-        return res.status(500).json(jsonHelper(500, 'Internal server error (none of your business)'))
-    }
-    res.locals.collection = connection.collection('events')
-    next()
-}
-
-/**
- * Schema for the form submission for events
- *
- * @type {Schema}
- */
-const eventValidator = new Schema({
-    event_name: {
-        type: String,
-        required: true,
-        length: {min : 3, max : 255}
-    },
-    deadline: {
-        type: String,
-        match: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
-        required: true
-    }
-})
-
-const participantValidator = new Schema({
-    id: {
-        required: true,
-    },
-    name: {
-        type: String,
-        required: true,
-        match: /^(\w.+\s).+$/,
-        length: { min: 3, max: 250 }
-    },
-    email: {
-        type: String,
-        required: true
-    },
-    address: {
-        street: {
-            type : String
-        },
-        city: {
-            type: String
-        },
-        postcode: {
-            type: String
-        },
-    }
-})
-
-const homeAddressValidator = new Schema ({
-    street: {
-        type : String,
-        required: true
-    },
-    city: {
-        type: String,
-        required: true
-    },
-    postcode: {
-        type: String,
-        required: true
-    }
-})
-
 
 app.use(express.json())
 app.use(cors())
@@ -170,9 +65,7 @@ app.get('/events/:id', dbMiddleware, async (req, res) => {
     try {
         _id = ObjectId(req.params.id)
     } catch(err) {
-        res.status(400).json(jsonHelper(400, 'Invalid ID'))
-
-        return
+        return res.status(400).json(jsonHelper(400, 'Invalid ID'))
     }
 
     const data = await res.locals.collection.findOne({_id})
@@ -195,18 +88,30 @@ app.delete('/events/:id', async (req, res) => {
     res.status(405).json(jsonHelper(405, "Method not allowed"))
 })
 
-// /participant/:eventId route
+// /participants/:eventId route
 
-app.get('/participant/:eventId', async (req, res) => {
-    res.status(405).json(jsonHelper(405, 'Method not allowed'))
+app.get('/participants/:eventId', dbMiddleware, async (req, res) => {
+    let eventId
+    try {
+        eventId = ObjectId(req.params.id)
+
+        const result = await res.locals.collection.find({_id: eventId}).project({participants: 1, _id: 0}).next()
+
+        if ('participants' in result) {
+            return res.status(200).json(jsonHelper(200, 'Successfully retrieved participants', result))
+        }
+        res.status(400).json(jsonHelper(400, 'Invalid ID'))
+    } catch(err) {
+        res.status(400).json(jsonHelper(400, 'Invalid ID'))
+    }
 })
 
-app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
-    const _id = ObjectId(req.params.eventId)
-    const id = ObjectId()
+app.post('/participants/:eventId', dbMiddleware, async (req, res) => {
+    const eventId = ObjectId(req.params.eventId)
+    const participantId = ObjectId()
 
     const dataToInsert = {
-        id,
+        id: participantId,
         name: req.body.name,
         email: req.body.email,
         address: req.body.address
@@ -220,7 +125,7 @@ app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
     }
 
     if(dataToInsert.address) {
-        addressErrors = homeAddressValidator.validate(dataToInsert.address)
+        addressErrors = addressValidator.validate(dataToInsert.address)
         if(!postcodeValidator(dataToInsert.address.postcode, 'GB')) {
             addressErrors.push({ message: 'postcode must be a valid postcode' })
         }
@@ -235,20 +140,20 @@ app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
         return res.status(400).json(jsonHelper(400, message))
     }
 
-    const result = res.locals.collection.updateOne({_id}, {$push : {participants: dataToInsert}})
+    const result = res.locals.collection.updateOne({_id: eventId}, {$push : {participants: dataToInsert}})
 
     if(result.modifiedCount === 0) {
         res.status(400).json(jsonHelper(400, 'Could not add participant'))
     } else {
-        res.status(200).json(jsonHelper(200, 'Participant added',{id}))
+        res.status(200).json(jsonHelper(200, 'Participant added',{id: participantId}))
     }
 })
 
-app.put('/participant/:eventId', async (req, res) => {
+app.put('/participants/:eventId', async (req, res) => {
     res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
-app.delete('/participant/:eventId', async (req, res) => {
+app.delete('/participants/:eventId', async (req, res) => {
     res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
