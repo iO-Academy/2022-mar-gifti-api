@@ -74,17 +74,20 @@ const eventValidator = new Schema({
 })
 
 const participantValidator = new Schema({
-    participant_name: {
+    id: {
+        required: true,
+    },
+    name: {
         type: String,
         required: true,
         match: /^(\w.+\s).+$/,
         length: { min: 3, max: 250 }
     },
-    participant_email: {
+    email: {
         type: String,
         required: true
     },
-    participant_home_address: {
+    address: {
         street: {
             type : String
         },
@@ -98,19 +101,17 @@ const participantValidator = new Schema({
 })
 
 const homeAddressValidator = new Schema ({
-    participant_home_address: {
-        street: {
-            type : String,
-            required: true
-        },
-        city: {
-            type: String,
-            required: true
-        },
-        postcode: {
-            type: String,
-            required: true
-        },
+    street: {
+        type : String,
+        required: true
+    },
+    city: {
+        type: String,
+        required: true
+    },
+    postcode: {
+        type: String,
+        required: true
     }
 })
 
@@ -219,7 +220,7 @@ app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
 
     if(dataToInsert.address) {
         addressErrors = homeAddressValidator.validate(dataToInsert.address)
-        if(postcodeValidator(dataToInsert.address.postcode, 'GB')) {
+        if(!postcodeValidator(dataToInsert.address.postcode, 'GB')) {
             addressErrors.push({ message: 'postcode must be a valid postcode' })
         }
     }
