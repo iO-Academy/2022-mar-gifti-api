@@ -149,6 +149,40 @@ app.delete('/events/:id', async (req, res) => {
     res.status(405).json(jsonHelper(405, "Method not allowed"))
 })
 
+// /participant/:eventId route
+
+app.get('/participant/:eventId', async (req, res) => {
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
+})
+
+app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
+    const _id = ObjectId(req.params.eventId)
+    const id = ObjectId()
+
+    const dataToInsert = {
+        id,
+        name: req.body.name,
+        email: req.body.email,
+        address: req.body.address
+    }
+
+    const result = res.locals.collection.updateOne({_id}, {$push : {participants: dataToInsert}})
+
+    if(result.modifiedCount === 0) {
+        res.status(400).json(jsonHelper(400, 'Could not add participant'))
+    } else {
+        res.status(200).json(jsonHelper(200, 'Participant added',{id}))
+    }
+})
+
+app.put('/participant/:eventId', async (req, res) => {
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
+})
+
+app.delete('/participant/:eventId', async (req, res) => {
+    res.status(405).json(jsonHelper(405, 'Method not allowed'))
+})
+
 // Catch-all route
 
 app.all('*', (req, res) =>{
