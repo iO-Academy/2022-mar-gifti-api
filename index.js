@@ -91,9 +91,8 @@ app.delete('/events/:id', async (req, res) => {
 // /participants/:eventId route
 
 app.get('/participants/:eventId', dbMiddleware, async (req, res) => {
-    let eventId
     try {
-        eventId = ObjectId(req.params.id)
+        const eventId = ObjectId(req.params.eventId)
 
         const result = await res.locals.collection.find({_id: eventId}).project({participants: 1, _id: 0}).next()
 
@@ -102,6 +101,7 @@ app.get('/participants/:eventId', dbMiddleware, async (req, res) => {
         }
         res.status(400).json(jsonHelper(400, 'Invalid ID'))
     } catch(err) {
+        console.log(err.message)
         res.status(400).json(jsonHelper(400, 'Invalid ID'))
     }
 })
