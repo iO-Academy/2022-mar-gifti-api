@@ -16,7 +16,7 @@
 
 * **Data Params**
 
-  * **Body:** `{ event_name : string, deadline : string }`
+  * **Body:** `{ event_name : string, deadline : string, address_required : boolean }`
 
 * **Success Response:**
 
