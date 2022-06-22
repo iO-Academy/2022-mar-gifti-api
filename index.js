@@ -3,6 +3,8 @@ const cors = require('cors')
 const MongoClient = require('mongodb').MongoClient
 const ObjectId = require('mongodb').ObjectId
 const Schema = require('validate')
+const { postcodeValidator, PostcodeValidatorExistsForCountry} = require('postcode-validator')
+const EmailValidator = require('email-validator')
 
 const app = express()
 const port = 3000
@@ -70,6 +72,49 @@ const eventValidator = new Schema({
         required: true
     }
 })
+
+const participantValidator = new Schema({
+    id: {
+        required: true,
+    },
+    name: {
+        type: String,
+        required: true,
+        match: /^(\w.+\s).+$/,
+        length: { min: 3, max: 250 }
+    },
+    email: {
+        type: String,
+        required: true
+    },
+    address: {
+        street: {
+            type : String
+        },
+        city: {
+            type: String
+        },
+        postcode: {
+            type: String
+        },
+    }
+})
+
+const homeAddressValidator = new Schema ({
+    street: {
+        type : String,
+        required: true
+    },
+    city: {
+        type: String,
+        required: true
+    },
+    postcode: {
+        type: String,
+        required: true
+    }
+})
+
 
 app.use(express.json())
 app.use(cors())
@@ -164,6 +209,29 @@ app.post('/participant/:eventId', dbMiddleware, async (req, res) => {
         name: req.body.name,
         email: req.body.email,
         address: req.body.address
+    }
+
+    let generalErrors = participantValidator.validate(dataToInsert)
+    let addressErrors = []
+
+    if(!EmailValidator.validate(dataToInsert.email)) {
+        generalErrors.push({ message: 'email must be a valid email' })
+    }
+
+    if(dataToInsert.address) {
+        addressErrors = homeAddressValidator.validate(dataToInsert.address)
+        if(!postcodeValidator(dataToInsert.address.postcode, 'GB')) {
+            addressErrors.push({ message: 'postcode must be a valid postcode' })
+        }
+    }
+
+    const errors = generalErrors.concat(addressErrors)
+    if(errors.length > 0)  {
+        let message = ''
+        errors.forEach(error => {
+            message += error.message + ' '
+        })
+        return res.status(400).json(jsonHelper(400, message))
     }
 
     const result = res.locals.collection.updateOne({_id}, {$push : {participants: dataToInsert}})
