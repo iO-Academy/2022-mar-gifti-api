@@ -93,6 +93,60 @@
     ```
 
 ----
+### Fetches all participants from a given event
+
+* **URL**
+
+  `/participants/:eventId`
+
+* **Method:**
+
+  `GET`
+
+* **URL Params**
+
+  `:eventId`corresponds to a MongoDB ID for the event the participant is to be added to
+
+* **Success Response:**
+
+    * **Code:** 200 <br />
+      **Content:** <br />
+    ```json
+      {
+        "status": "200",
+        "message": "Successfully retrieved participants",
+        "data": {
+                  "participants": [
+                    {
+                      "id": "62b2f906f5b8b8a583af3f3f",
+                      "name": "Steven Stevens",
+                      "email": "krustydude@bikinibottom.org",
+                      "address": {
+                          "street": "Krusty Road",
+                          "city": "Bikini Bottom",
+                          "postcode": "BS8 4LY"
+                        }
+                    }
+                  ]
+                }
+      }
+    ```
+
+
+
+* **Error Response:**
+
+    * **Code:** 400 BAD REQUEST <br />
+      **Content:** <br />
+    ```json
+      {
+        "status": "400",
+        "message": "Invalid ID",
+        "data": null
+      }
+    ```
+
+----
 ### Adds a participant to an event
 
 * **URL**
