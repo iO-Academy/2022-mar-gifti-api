@@ -68,7 +68,8 @@ const eventValidator = new Schema({
         length: {min : 3, max : 255}
     },
     deadline: {
-        type: Date,
+        type: String,
+        match: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/,
         required: true
     }
 })
