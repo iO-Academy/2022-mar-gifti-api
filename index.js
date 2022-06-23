@@ -158,6 +158,33 @@ app.delete('/participants/:eventId', async (req, res) => {
     res.status(405).json(jsonHelper(405, 'Method not allowed'))
 })
 
+// /participant/:eventId/:participantId route
+
+app.get('/participant/:eventId/:participantId', dbMiddleware, async (req, res) => {
+    const eventId = ObjectId(req.params.eventId)
+    const participantId = ObjectId(req.params.participantId)
+
+    const result = await res.locals.collection.find({_id: eventId, "participants.id": participantId}).project({"participants.$": 1}).next()
+
+    const data = {eventId: result._id, participant: result.participants[0]}
+
+    return res.status(200).json(jsonHelper(200, 'Successfully retrieved participant', data))
+})
+
+app.put('/participant/:eventId/:participantId', dbMiddleware, async (req, res) => {
+    const eventId = ObjectId(req.params.eventId)
+    const participantId = ObjectId(req.params.participantId)
+
+    const receiver = req.body.receiver
+    receiver.id = ObjectId(receiver.id)
+
+    const result = await res.locals.collection.updateOne({_id: eventId, "participants.id": participantId}, {$set: {'participants.$.receiver': receiver}})
+    if(result.modifiedCount){
+        return res.status(200).json(jsonHelper(200, 'Successfully updated receiver'))
+    }
+    return res.status(400).json(jsonHelper(400, 'Failed to update receiver'))
+})
+
 // Catch-all route
 
 app.all('*', (req, res) =>{
